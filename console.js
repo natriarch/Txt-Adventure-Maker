@@ -9,52 +9,28 @@
   ==  Develop tree script structure
 */
 
+
 $(document).ready(function() {
     var outputEl = document.getElementById('output');
-    var inputEl = document.getElementById('user_input'); 
+    var inputEl = document.getElementById('user_input');     
     var myConsole = new Console(outputEl, inputEl);
-    
+
     outputEl.value = '';
     inputEl.value = ''; 
 
-    var prompt1 = new PlotPoint('narrator');
-    prompt1.text = 'You' + "'" + 're at a hotdog stand. You find the health standards at this establishment wanting. How you gonna act?';   
-    prompt1.id = 'p1';
-
-    var input1 = new PlotPoint('user');
-    input1.id = 'i1';
-        
-    var prompt2a = new PlotPoint('narrator');
-    prompt2a.text = 'The owner looks down in shame. When you pass by next week, the hotdog stand is gone';
-    prompt2a.id = 'p2a';
-
-    var prompt2b = new PlotPoint('narrator');
-    prompt2b.text = 'The owner applies a gray-green relish analog to your dog and charges you $7';
-    prompt2b.id = 'p2b';
-
-    var input2 = new PlotPoint('user'); 
-    input2.id = 'i2';    
-
-    var input3 = new PlotPoint('user'); 
-    input3.id = 'i3';
-
-    var prompt3 = new PlotPoint('narrator'); 
-    prompt3.text = 'The end';
-    prompt3.id = 'p3';
-
-    prompt1.addNextPP('This should not print', input1);
-    input1.addNextPP('complain', prompt2a);
-    input1.addNextPP('suck it up', prompt2b);
-    prompt2a.addNextPP('', input2);
-    prompt2b.addNextPP('', input2);
-    input2.addNextPP('end', prompt3);
-    prompt3.addNextPP('', input3);
-    input3.addNextPP('again', prompt1);
-     
     var myDirector = new Director(myConsole);
+    
+    var pp1 = new PlotPoint('first');
+    var pp2 = new PlotPoint('second');
+    var pp3 = new PlotPoint('third', '3');
+    var pp4 = new PlotPoint('fourth', '4');
+    var input = new PlotPoint('3 or 4?'); 
+    pp1.next.push(pp2);
+    pp2.next.push(input);
+    input.next.push(pp3);
+    input.next.push(pp4);
 
-    myDirector.action(prompt1);
-     
+    myDirector.action(pp1);
 });
 
  
@@ -69,6 +45,12 @@ var Console = function(textEl, inputEl) {
 };
 
 //______CONSOLE_METHODS______
+var Director = function(cons) {
+    this.console = cons;
+    this.currentInput = '';
+    this.currentPP = undefined;
+}
+
 
 //_Display some text with a delay between chars.
 Console.prototype.display = function(text, delay, callback) { 
@@ -94,65 +76,65 @@ Console.prototype.display = function(text, delay, callback) {
     }
 };
 
-//__DIRECTOR_CONSTRUCTOR_____________________________________
-//This object will feed text to the Console object for displaying
-//Coordinates interaction with user
 
-var Director = function(cons) { 
-    this.console = cons;
-    this.currentInput = '';
-};
+//~~~~~~~~~~~~~~~~DIRECTOR_METHODS~~~~~~~~~~~~~~~~~~
+Director.prototype.getInput = function(t) {
 
-//______DIRECTOR_METHODS______
-
-Director.prototype.getInput = function(callback) {
-
-    var that = this;
+    var that = t;
     console.log('getting input');
     
-    this.console.inputArea.disabled = false;   
+    this.activateInput();   
 
-    $(this.console.inputArea).keypress(function (e) {
-        if (e.which === 13) {
-            that.currentInput = that.console.inputArea.value;
-            callback();
-        }
-    });
+
 };
+
+Director.prototype.activateInput= function() {
+    this.console.inputArea.disabled = false;
+}
+
+Director.prototype.buildDisplayCb = function() {
+    return function() { 
+        that.console.display(text, speed, callback);
+    }
+}
 
 //run the show. print plot points
 //and act on user input.
 Director.prototype.action = function(pp) { 
-
-    var thePP = pp;
-    var nextPP;
-    console.log('thePP: ' + typeof thePP);
     var that = this;
 
-    var inCallback = function() {
-        that.console.display(that.currentInput, 0, callback);
-    };    
+    this.currentPP = pp;
+    console.log(this.currentPP.text);
+    var nextPlotCb = function() {
+        that.action(pp.next[0]); 
+    }
 
-    var callback = function(){
-        if (thePP.who === 'narrator') {
-            nextPP = thePP.next[0].nextPlotPoint;
-        }
-        else if (thePP.who === 'user'){
-            for (var i = 0; i < thePP.next.length; i++) {
-                if (that.currentInput === thePP.next[i].inputKey) {
-                    var nextPP = thePP.next[i].nextPlotPoint;
-                }
-            }
-        }
-        that.action(nextPP);
-    };
+    var processInputCb = function() {
+    }
     
-    if (thePP.who === 'user'){
-        console.log('user pp');
-        that.getInput(inCallback);
+    if (pp.next.length == 1){
+        this.console.display(pp.text, 50, nextPlotCb);
     } 
-    if (thePP.who === 'narrator') {
-        that.console.display(thePP.text, 0, callback);
+
+    else if (pp.next.length > 1) {
+        //this.console.display(pp.text, 50, this.getInput); 
+        this.getInput(this);
+    }
+    else {
+        console.log('end');
+    }
+};
+
+Director.prototype.getCurrentPP = function() {
+    return this.currentPP; 
+};
+
+Director.prototype.processInput = function() { 
+    var input = this.currentInput;
+    for (var i = 0; i < this.getCurrentPP.next.length; i++) {
+        if (input === this.getCurrentPP.next[i].key) {
+            action(this.getCurrentPP.next[i]);
+        }
     }
 };
 
@@ -160,16 +142,30 @@ Director.prototype.action = function(pp) {
 //the nodes of our script tree structure
 //contain references for next plot points
 
-var PlotPoint = function(user) {
-    this.end = false;
-    this.who = user; //either 'narrator' or 'user'
+var PlotPoint = function(text, key) {
     this.next = []; 
-    this.text = '';
-    this.id = '';
+    this.text = text;
+    this.key = undefined;
 };
 
-//______PLOTPOINT_METHODS___
-PlotPoint.prototype.addNextPP = function(key, pp) {
-    nextPP = {inputKey: key, nextPlotPoint: pp}; 
-    this.next.push(nextPP);
+//__SRIPT_CONSTRUCTOR______________________________________
+function Script(){
+    this.start = null;
+    this.end = null;
 };
+
+Script.prototype.add = function() {
+    if (this.start === null) {
+        this.start = List.makeNode();
+        this.end = this.start;
+    }
+    else {
+        this.end.next = List.makeNode();
+        this.end = this.end.next;       
+    }   
+};
+
+Script.makeNode = function() {
+    return {data: null, next: null};
+};
+

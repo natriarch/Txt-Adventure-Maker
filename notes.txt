@@ -1,0 +1,36 @@
+~~Notes for Text Adventure~~
+
+    --how to interact with text environment?
+        --Separate physical locations into 'scenes'
+            --players are in a scene until they leave it...
+            --shots within a scene describe things in the scene
+                --activated by 'look at' command or other similar phrases
+                    -'examine', 'inspect', 'look at', 'check out',
+                --these may offer new opportunities for obtaining or interacting with stuff.
+            --incorrect user input should prompt the scene to give a hint of some kind.
+
+
+COMMANDS______________________________________________________
+    Examine something closer
+        'examine', 'inspect', 'look at', 'check out'
+    
+    Look for an object not explicitly stated in scene
+        'find', 'locate'
+        ex. 'find lightswitch'
+
+
+EXAMPLE SCENES________________________________________________
+1. Intro, waking up in middle of night
+
+    You wake up in bed. It's dark. Thunder claps in the distance and the light patter of rain on the window.
+        -Get out of bed ~ You throw away the duvet and swivel sideways to get out of bed. you step forward and kick an object on the ground
+        -look around ~ you struggle to see anything
+        -look at object ~ The room is dark and you can barely make out a smallish rectangular sillouhette.
+        -find lights ~ you fumble in the dark for your reading light. There it is!
+        -turn on lights ~ the incessant buzz of illumination prods your ears and your room glows a dim yellow.
+
+    
+
+    
+    
+    
