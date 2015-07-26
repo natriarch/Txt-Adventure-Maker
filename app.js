@@ -1,18 +1,29 @@
 $(document).ready(function() {
+
     var outElement = document.getElementById('output');
     var inElement = document.getElementById('input');
     var myDisp = new Display(inElement, outElement);
 
-    var box = new Prop('box');
-    var onBoxAction = new Action('box_on', 'with some effort, you climb atop the box'); 
-    var openBoxAction = new Action('box_open', 'the box opens from the top. Inside you find a nickle!');
-    var scene1 = new Scene('You are in an small room with containing only a small box and a door. What you do?'); 
+    var scene1 = new Scene('You are in an small room containing only a large box and a door. What you do?'); 
+    var scene1LookBox = new Scene('A black metal box. One of the top edges is hinged', 'examine box');
+    var scene1OpenBox = new Scene('the box opens. Inside you find another box', 'open box');
+    var scene1ClimbBox  = new Scene('with some effort, you climb atop the box', 'climb box');
+    scene1LookBox.addNext(scene1);
+    scene1ClimbBox.addNext(scene1);
+    scene1OpenBox.addNext(scene1);
 
-    var scene2 = new Scene('You are in an identical room to the first'); 
+    //Example of a scene effect. Scenes can have effects that are user defined functions that
+    //alter the status of some other thing. ex. Kill player, change text of a scene when something happens.
+    //scripting stuff
+    scene1OpenBox.addEffect(function() {
+        scene1.content = 'the corners of the room now glow faintly with pulsating green light';
+        scene1.displayed = false;
+    });
+    
+    scene1.addNext(scene1LookBox);
+    scene1.addNext(scene1OpenBox);
+    scene1.addNext(scene1ClimbBox);
 
-    scene1.addProp(box); 
-    box.addAction(onBoxAction);
-    box.addAction(openBoxAction); 
     var myDir = new Director(scene1, myDisp);
     
     $(inElement).keydown(function (e) {
@@ -27,43 +38,43 @@ $(document).ready(function() {
     myDir.runStory(); 
 });
 
+
+
+
 //Think scenes of a movie.
+//todo: hints, multiple content strings
 function Scene(text, key) {
-    this.next;
-    this.content = [text];
-    this.props = [];
-    this.hints = [];
+
+    this.content = text;
+    this.key = key;
+    this.next = [];
+    this.previous;
+    this.effects = [];
+    this.displayed = false;
 }
 
-Scene.prototype.addProp(prp) {
-    this.props.push(prp);
+//link this scene to the next one. Can be circularly linked.
+Scene.prototype.addNext = function(sc) {
+
+    this.next.push(sc);
 }
 
-function Prop(txt) {
-    this.text = txt;
-    this.actions = [];
-}
+//effects are functions. Each scene has a list of effects that happen when the scene is activated.
+Scene.prototype.addEffect = function(eff) {
 
-Prop.prototype.addAction(act) {
-    this.actions.push(act);        
-}
-
-function Player() {
-    this.inventory = [];
-}
-
-function Action(k, txt, callback) {
-    this.key = k; 
-    this.result = txt;
-    this.reaction = callback;
+    this.effects.push(eff);
 }
 
 function Display(inEl, outEl) {
+
     this.inBox = inEl;
     this.outBox = outEl;
+
+    this.inBox.disabled = true;
 }
 
 Display.prototype.print = function(text, speed, cb) {
+
         var that = this;
         var output = text;
         var callback = cb;
@@ -77,8 +88,10 @@ Display.prototype.print = function(text, speed, cb) {
             var index = x;
             return function() {
                 that.outBox.value += output.charAt(x);
-                if (index === output.length - 1) 
+                if (index === output.length - 1) {
+                    that.inBox.disabled = false;
                     callback();
+                }
             };
         }
 
@@ -88,34 +101,53 @@ Display.prototype.print = function(text, speed, cb) {
         }
 }
 
-var Director = function(scn, disp) {
+var Director = function(scn, disp, p) {
+
     var that = this;
 
     this.currentScene = scn;
     this.myDisplay = disp;
+    this.myPlayer = p; 
     this.currentInput;
+    this.gettingInput = false;
 
     this.checkInput = function() {
-        for (var i = 0; i < that.currentScene.length; i ++) {
-            if (that.currentInput.toLowerCase() === that.currentScene[i].key.toLowerCase()) {
+
+        for (var i = 0; i < that.currentScene.next.length; i ++) {
+            if (that.currentInput.toLowerCase() === that.currentScene.next[i].key.toLowerCase()) {
                 console.log('input valid!');
-                that.currentScene = that.currentScene[i];
+                that.currentScene = that.currentScene.next[i];
                 that.runStory();
             }
         }
-    } 
-
+    }
+ 
     this.runStory = function() {
-        if (Object.prototype.toString.call(that.currentScene) === '[object Array]') {
-            that.myDisplay.inBox.disabled = false;
 
-        } else {
-            that.myDisplay.print(that.currentScene.content, 100, that.runStory);
-            that.currentScene = that.currentScene.next; 
-        }
+        if (!that.currentScene.displayed){
+            that.myDisplay.print(that.currentScene.content, 20, that.runStory);
+            for (var i = 0; i < that.currentScene.effects.length; i++) {
+                that.currentScene.effects[i]();
+            }
+            that.currentScene.displayed = true;
+        }   
+        for (var i = 0; i < that.currentScene.effects.length; i++) {
+            that.currentScene.effects[i]();
+        } 
+
+        if (that.currentScene.next.length === 1) {
+            that.currentScene = that.currentScene.next[0];
+        } 
     }
 }
 
 var Player = function() {
+
     this.inventory = [];
+    this.state = '';
 }
+
+Player.prototype.setState = function(txt) {
+
+    this.state = txt;
+}    
